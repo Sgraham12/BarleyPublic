@@ -526,8 +526,8 @@ for (i in 1:8) {
                      tuneGrid = expand.grid(cost = k_svm))
 
     pred_svm_mod10 <- data.frame(
-      name = genos,
-      env = locs,
+      name = unname(genos),
+      env = unname(locs),
       y = y_ML,
       yhat = predict(Model10, newdata = test),
       model = 10,
