@@ -57,12 +57,12 @@ for (i in 1:8) {
       grepl("BS4R8", Trial) ~ "BS4R8",
       TRUE ~ NA_character_
     ))
-
+  
   pheno <- pheno %>% filter(!is.na(Yield)) %>% filter(Expt != "BDUP") %>% filter (!is.na(Sample.ID))
   pheno$ENV <- as.factor(pheno$ENV)
   pheno <- pheno %>% select("Sample.ID", "ENV", "Yield")
   pheno$ENV <- gsub( " .*$", "", pheno$ENV)
-
+  
   if (i == 2) {
     pheno <- pheno %>% filter(str_detect(ENV, "Lincoln"))
   } else if (i == 3) {
@@ -82,7 +82,7 @@ for (i in 1:8) {
   pheno$Sample.ID <- as.factor(pheno$Sample.ID)
   pheno_list <- unique(pheno$Sample.ID)
   pheno_list <- data.frame(pheno_list)
-
+  
   #### Geno Data for GBLUP ####
   X <- read.csv("geno_allV2.csv")
   X <- X[order(X[, 1]), ]
@@ -94,10 +94,10 @@ for (i in 1:8) {
   # Remove markers (columns) with NA values
   NAMkrs <- names(which(colSums(is.na(X_merge)) > 0))
   X_merge <- X_merge[, !colnames(X_merge) %in% NAMkrs]
-
+  
   # Scale the data (center and scale each column)
   X_merge <- scale(X_merge, center = TRUE, scale = TRUE)
-
+  
   # Set row names to the ordered genotype sample names
   rownames(X_merge) <- geno_order
   X <- X_merge
@@ -106,24 +106,24 @@ for (i in 1:8) {
   NAMkrs <- names(which(colSums(is.na(X)) > 0))
   X <- X[, !colnames(X) %in% NAMkrs]
   
-  n <- nrow(X) 
+  n <- nrow(X)
   p <- ncol(X)
   cat("Dimensions of X:", n, "genotypes and", p, "markers\n")
-
+  
   G <- tcrossprod(X)/p
   dim(G)
-
+  
   #### Geno Data for Bayes ####
   rownames(X)
   X_Bayes <- merge(pheno, X, by.x = "Sample.ID", by.y = "row.names")
   X_Bayes <- X_Bayes[,-1:-3]
-
+  
   #### Import all Weather Data ####
   weather <- read.csv("W_SummerOnly.csv") #Tried with Weather PCs- it was worse.
   W <- merge(pheno, weather, by = "ENV", all.x = T)
   W <- W[order(W$Sample.ID),] #sort to match pheno
   W <- W %>% select(where(~mean(is.na(.)) < .01)) # Drop columns with more than 1% missing values (30 columns dropped)
-
+  
   #### Define Training/ Testing ####
   y <- W[,"Yield"]
   yNA <- y
@@ -131,46 +131,46 @@ for (i in 1:8) {
   yNA[test] <- NA
   length(test)
   obs <- W %>% filter(ENV == "2024Lincoln")
-
+  
   #### Matrix Creation for GBLUP ####
   # incidence matrix of main effects of genotype
   Z0.L <- model.matrix(~0 + Sample.ID, data=W)
   Z.L <- as.matrix(Z0.L[1:dim(Z0.L)[1],1:dim(Z0.L)[2]]) #same info but cleaner format
-
+  
   # incidence matrix of main effects of environment
   Z0.E <- model.matrix(~0 + ENV, data=W)
   Z.E <- as.matrix(Z0.E[1:dim(Z0.E)[1],1:dim(Z0.E)[2]]) #same info but cleaner format
   ZEZE <- tcrossprod(Z.E)
-
+  
   # Augmented G Matrix
   G_augE <-Z.L %*% G %*% t(Z.L)
   G_augGE <- G_augE*ZEZE #Hadamard Product
-
+  
   #Env covariate matrix
   Wmat <- W %>% select(-ENV, -Sample.ID, -X, -year, -Location, -Yield)
   Wmat <- sapply(Wmat, as.numeric)
   Wmat <- mean_imputation(Wmat)
   Wmat <- Wmat/sqrt(ncol(Wmat)) #Normalize
   Wmat2 <- tcrossprod(Wmat)/ncol(Wmat) #Omega
-
+  
   GW <- G_augE * Wmat2
-
+  
   # Machine Learning Data
   X_ML <- merge(pheno, X, by.x = "Sample.ID", by.y = "row.names")
   X_ML <- X_ML %>% select(Yield, everything())
   X_ML$Sample.ID <- as.factor(X_ML$Sample.ID)
   X_ML$ENV <- as.factor(X_ML$ENV)
-
+  
   cvdf <- data.frame()
   for (j in 1:reps) {
-
+    
     ### Model 1: G + E
     EtaM1 <- list(Line =list(X=Z.L, model = "BRR"),
                   ENV = list(X = Z.E, model = "FIXED"),
-                   G = list(K = G_augE, model = "RKHS"))
-
+                  G = list(K = G_augE, model = "RKHS"))
+    
     Model1 <- BGLR(y = yNA, ETA = EtaM1, nIter = nIter, burnIn = burnIn, verbose = F)
-
+    
     pred_gblup_bglr_mod1 <- data.frame(
       name = pheno[test, "Sample.ID"],
       env = pheno[test, "ENV"],
@@ -180,17 +180,17 @@ for (i in 1:8) {
       rep = j,
       CV = i
     )
-
+    
     cvdf <- rbind(cvdf, pred_gblup_bglr_mod1)
-
+    
     ### Model 2: G + E + GxE
     EtaM2 <- list(Line =list(X = Z.L, model = "BRR"),
-                   ENV = list(X = Z.E, model = "FIXED"),
-                   G = list(K = G_augE, model = "RKHS"),
-                   GE = list(K = G_augGE, model = "RKHS"))
-
+                  ENV = list(X = Z.E, model = "FIXED"),
+                  G = list(K = G_augE, model = "RKHS"),
+                  GE = list(K = G_augGE, model = "RKHS"))
+    
     Model2 <- BGLR(y = yNA, ETA = EtaM2, nIter = nIter, burnIn = burnIn, verbose = F)
-
+    
     pred_gblup_bglr_mod2 <- data.frame(
       name = pheno[test, "Sample.ID"],
       env = pheno[test, "ENV"],
@@ -200,16 +200,16 @@ for (i in 1:8) {
       rep = j,
       CV = i
     )
-
+    
     cvdf <- rbind(cvdf, pred_gblup_bglr_mod2)
-
+    
     ### Model 3: G + W
     EtaM3 <- list(Line =list(X = Z.L, model = "BRR"),
-                   W = list(K = Wmat2, model = "RKHS"),
-                   G = list(K = G_augE, model = "RKHS"))
-
+                  W = list(K = Wmat2, model = "RKHS"),
+                  G = list(K = G_augE, model = "RKHS"))
+    
     Model3 <- BGLR(y = yNA, ETA = EtaM3, nIter = nIter, burnIn = burnIn, verbose = F)
-
+    
     pred_gblup_bglr_mod3 <- data.frame(
       name = pheno[test, "Sample.ID"],
       env = pheno[test, "ENV"],
@@ -219,17 +219,17 @@ for (i in 1:8) {
       rep = j,
       CV = i
     )
-
+    
     cvdf <- rbind(cvdf, pred_gblup_bglr_mod3)
-
+    
     ### Model 4: G + W + GxW
     EtaM4 <- list(Line =list(X = Z.L, model = "BRR"),
-                   W = list(K = Wmat2, model = "RKHS"),
-                   G = list(K = G_augE, model = "RKHS"),
-                   GW = list(K = GW, model = "RKHS"))
-
+                  W = list(K = Wmat2, model = "RKHS"),
+                  G = list(K = G_augE, model = "RKHS"),
+                  GW = list(K = GW, model = "RKHS"))
+    
     Model4 <- BGLR(y = yNA, ETA = EtaM4, nIter = nIter, burnIn = burnIn, verbose = F)
-
+    
     pred_gblup_bglr_mod4 <- data.frame(
       name = pheno[test, "Sample.ID"],
       env = pheno[test, "ENV"],
@@ -239,16 +239,16 @@ for (i in 1:8) {
       rep = j,
       CV = i
     )
-
+    
     cvdf <- rbind(cvdf, pred_gblup_bglr_mod4)
-
+    
     ### Model 5: BayesA
     EtaM5 <- list(Line =list(X=Z.L, model = "BRR"),
                   ENV = list(X = Z.E, model = "FIXED"),
                   G = list(X = X_Bayes, model = "BayesA"))
-
+    
     Model5 <- BGLR(y = yNA, ETA = EtaM5, nIter = nIter, burnIn = burnIn, verbose = F)
-
+    
     pred_gblup_bglr_mod5 <- data.frame(
       name = pheno[test, "Sample.ID"],
       env = pheno[test, "ENV"],
@@ -258,16 +258,16 @@ for (i in 1:8) {
       rep = j,
       CV = i
     )
-
+    
     cvdf <- rbind(cvdf, pred_gblup_bglr_mod5)
-
+    
     ### Model 6: BayesB
     EtaM6 <- list(Line =list(X=Z.L, model = "BRR"),
                   ENV = list(X = Z.E, model = "FIXED"),
                   G = list(X = X_Bayes, model = "BayesB"))
-
+    
     Model6 <- BGLR(y = yNA, ETA = EtaM6, nIter = nIter, burnIn = burnIn, verbose = F)
-
+    
     pred_gblup_bglr_mod6 <- data.frame(
       name = pheno[test, "Sample.ID"],
       env = pheno[test, "ENV"],
@@ -277,16 +277,16 @@ for (i in 1:8) {
       rep = j,
       CV = i
     )
-
+    
     cvdf <- rbind(cvdf, pred_gblup_bglr_mod6)
-
+    
     ### Model 7: BayesC
     EtaM7 <- list(Line =list(X=Z.L, model = "BRR"),
                   ENV = list(X = Z.E, model = "FIXED"),
                   G = list(X = X_Bayes, model = "BayesC"))
-
+    
     Model7 <- BGLR(y = yNA, ETA = EtaM7, nIter = nIter, burnIn = burnIn, verbose = F)
-
+    
     pred_gblup_bglr_mod7 <- data.frame(
       name = pheno[test, "Sample.ID"],
       env = pheno[test, "ENV"],
@@ -296,16 +296,16 @@ for (i in 1:8) {
       rep = j,
       CV = i
     )
-
+    
     cvdf <- rbind(cvdf, pred_gblup_bglr_mod7)
-
+    
     ### Model 8: Bayes LASSO
     EtaM8 <- list(Line =list(X=Z.L, model = "BRR"),
                   ENV = list(X = Z.E, model = "FIXED"),
                   G = list(X = X_Bayes, model = "BL"))
-
+    
     Model8 <- BGLR(y = yNA, ETA = EtaM8, nIter = nIter, burnIn = burnIn, verbose = F)
-
+    
     pred_gblup_bglr_mod8 <- data.frame(
       name = pheno[test, "Sample.ID"],
       env = pheno[test, "ENV"],
@@ -315,7 +315,7 @@ for (i in 1:8) {
       rep = j,
       CV = i
     )
-
+    
     cvdf <- rbind(cvdf, pred_gblup_bglr_mod8)
   }
   rep_df <- rbind(rep_df, cvdf)
@@ -383,7 +383,7 @@ for (i in 1:8) {
   NAMkrs <- names(which(colSums(is.na(X)) > 0))
   X <- X[, !colnames(X) %in% NAMkrs]
   
-  n <- nrow(X) 
+  n <- nrow(X)
   p <- ncol(X)
   cat("Dimensions of X:", n, "genotypes and", p, "markers\n")
   
@@ -440,7 +440,7 @@ for (i in 1:8) {
   
   cvdf <- data.frame()
   for (j in 1:reps) {
-
+    
     # ### Model 9: Random Forest
     t <- ncol(X_ML)
     #col_list <- nearZeroVar(X_ML)
@@ -453,13 +453,13 @@ for (i in 1:8) {
     test <- X_ML %>% filter(ENV == "2024Lincoln")
     y_ML <- test$Yield
     test$Yield <- NULL
-
+    
     train <- X_ML %>% filter(ENV != "2024Lincoln")
-
+    
     k_rf = c(250, 500, 1000) #mtry grid
     mod_name <- c("9A", "9B", "9C")
     ntree_list <- c(250, 500, 1000) #ntrees grid
-
+    
     for (h in 1:3) {
       mod <- mod_name[h]
       ntree <- ntree_list[h]
@@ -469,7 +469,7 @@ for (i in 1:8) {
                       tuneGrid = expand.grid(mtry = k_rf),
                       ntree = ntree)
       assign(paste0("Model_", mod), Model9) #Save models with each value of ntree
-
+      
       pred_rf_mod9 <- data.frame(
         name = test$Sample.ID,
         env = test$ENV,
@@ -477,17 +477,17 @@ for (i in 1:8) {
         yhat = predict(Model9, newdata = test),
         model = 9
       )
-
+      
       pred_mod9 <- cor(pred_rf_mod9$y, pred_rf_mod9$yhat)
       assign(paste0("Pred_", mod), pred_mod9) #Save pred_accuracy with each value of ntree
       rm(pred_rf_mod9)
     }
-
+    
     best_mod <- c("9A", "9B", "9C")[which.max(c(Pred_9A, Pred_9B, Pred_9C))] #Get model with highest pred_accuracy
     best_mod_name <- get(paste0("Model_", best_mod)) #call the best model by name
-
+    
     assign("Model9", best_mod_name) #rename best model to generic Model 9
-
+    
     pred_rf_mod9 <- data.frame(
       name = test$Sample.ID,
       env = test$ENV,
@@ -498,33 +498,33 @@ for (i in 1:8) {
       CV = i,
       tune = paste0(Model9$bestTune[[1]], "_", Model9$finalModel['ntree'][[1]])
     )
-
+    
     cvdf <- rbind(cvdf, pred_rf_mod9)
-
+    
     ### Model 10: Support Vector Machine
     k_svm = c(0.01, 0.1, 1, 10) #c grid
-
+    
     ## Hot-one encoding for ENV and Sample ID
     dummy <- dummyVars(~ENV + Sample.ID, X_ML)
     DummyMat <- predict(dummy, X_ML)
     genos <- X_ML %>% filter(ENV == "2024Lincoln") %>% select(Sample.ID)
     locs <- X_ML %>% filter(ENV == "2024Lincoln") %>% select(ENV)
-
+    
     SVM_dat <- cbind(DummyMat, X_ML[,-2:-3])
     SVM_dat <- SVM_dat %>% select(Yield, everything())
-
+    
     test <- SVM_dat %>% filter(ENV.2024Lincoln == 1)
     y_ML <- test$Yield
     test$Yield <- NULL
-
+    
     train <- SVM_dat %>% filter(ENV.2024Lincoln != 1)
-
+    
     Model10 <- train(Yield ~ .,
                      data = train,
                      method = "svmLinear2",
                      scale = F,
                      tuneGrid = expand.grid(cost = k_svm))
-
+    
     pred_svm_mod10 <- data.frame(
       name = unname(genos),
       env = unname(locs),
@@ -535,7 +535,7 @@ for (i in 1:8) {
       CV = i,
       tune = Model10$bestTune[[1]]
     )
-
+    
     cvdf <- rbind(cvdf, pred_svm_mod10)
   }
   rep_df <- rbind(rep_df, cvdf)
@@ -555,11 +555,12 @@ for (i in c(2, 5)) {
       grepl("BS4R8", Trial) ~ "BS4R8",
       TRUE ~ NA_character_
     ))
-
+  
   pheno <- pheno %>% filter(!is.na(WinSur)) %>% filter(Expt != "BDUP") %>% filter (!is.na(Sample.ID))
   pheno$ENV <- as.factor(pheno$ENV)
   pheno <- pheno %>% select("Sample.ID", "ENV", "WinSur")
-
+  pheno$ENV <- gsub( " .*$", "", pheno$ENV)
+  
   if (i == 2) {
     pheno <- pheno %>% filter(str_detect(ENV, "Lincoln"))
   } else if (i == 3) {
@@ -579,7 +580,7 @@ for (i in c(2, 5)) {
   pheno$Sample.ID <- as.factor(pheno$Sample.ID)
   pheno_list <- unique(pheno$Sample.ID)
   pheno_list <- data.frame(pheno_list)
-
+  
   #### Geno Data for GBLUP ####
   X <- read.csv("geno_allV2.csv")
   X <- X[order(X[, 1]), ]
@@ -614,13 +615,13 @@ for (i in c(2, 5)) {
   rownames(X)
   X_Bayes <- merge(pheno, X, by.x = "Sample.ID", by.y = "row.names")
   X_Bayes <- X_Bayes[,-1:-3]
-
+  
   #### Import all Weather Data ####
   weather <- read.csv("W_SummerOnly.csv") #Tried with Weather PCs- it was worse.
   W <- merge(pheno, weather, by = "ENV", all.x = T)
   W <- W[order(W$Sample.ID),] #sort to match pheno
   W <- W %>% select(where(~mean(is.na(.)) < .01)) # Drop columns with more than 1% missing values (30 columns dropped)
-
+  
   #### Define Training/ Testing ####
   y <- W[,"WinSur"]
   yNA <- y
@@ -628,46 +629,46 @@ for (i in c(2, 5)) {
   yNA[test] <- NA
   length(test)
   obs <- W %>% filter(ENV == "2024Lincoln")
-
+  
   #### Matrix Creation for GBLUP ####
   # incidence matrix of main effects of genotype
   Z0.L <- model.matrix(~0 + Sample.ID, data=W)
   Z.L <- as.matrix(Z0.L[1:dim(Z0.L)[1],1:dim(Z0.L)[2]]) #same info but cleaner format
-
+  
   # incidence matrix of main effects of environment
   Z0.E <- model.matrix(~0 + ENV, data=W)
   Z.E <- as.matrix(Z0.E[1:dim(Z0.E)[1],1:dim(Z0.E)[2]]) #same info but cleaner format
   ZEZE <- tcrossprod(Z.E)
-
+  
   # Augmented G Matrix
   G_augE <-Z.L %*% G %*% t(Z.L)
   G_augGE <- G_augE*ZEZE #Hadamard Product
-
+  
   #Env covariate matrix
   Wmat <- W %>% select(-ENV, -Sample.ID, -X, -year, -Location, -WinSur)
   Wmat <- sapply(Wmat, as.numeric)
   Wmat <- mean_imputation(Wmat)
   Wmat <- Wmat/sqrt(ncol(Wmat)) #Normalize
   Wmat2 <- tcrossprod(Wmat)/ncol(Wmat) #Omega
-
+  
   GW <- G_augE * Wmat2
-
+  
   # Machine Learning Data
   X_ML <- merge(pheno, X, by.x = "Sample.ID", by.y = "row.names")
   X_ML <- X_ML %>% select(WinSur, everything())
   X_ML$Sample.ID <- as.factor(X_ML$Sample.ID)
   X_ML$ENV <- as.factor(X_ML$ENV)
-
+  
   cvdf <- data.frame()
   for (j in 1:reps) {
-
+    
     ### Model 1: G + E
     EtaM1 <- list(Line =list(X=Z.L, model = "BRR"),
                   ENV = list(X = Z.E, model = "FIXED"),
                   G = list(K = G_augE, model = "RKHS"))
-
+    
     Model1 <- BGLR(y = yNA, ETA = EtaM1, nIter = nIter, burnIn = burnIn, verbose = F)
-
+    
     pred_gblup_bglr_mod1 <- data.frame(
       name = pheno[test, "Sample.ID"],
       env = pheno[test, "ENV"],
@@ -677,17 +678,17 @@ for (i in c(2, 5)) {
       rep = j,
       CV = i
     )
-
+    
     cvdf <- rbind(cvdf, pred_gblup_bglr_mod1)
-
+    
     ### Model 2: G + E + GxE
     EtaM2 <- list(Line =list(X = Z.L, model = "BRR"),
                   ENV = list(X = Z.E, model = "FIXED"),
                   G = list(K = G_augE, model = "RKHS"),
                   GE = list(K = G_augGE, model = "RKHS"))
-
+    
     Model2 <- BGLR(y = yNA, ETA = EtaM2, nIter = nIter, burnIn = burnIn, verbose = F)
-
+    
     pred_gblup_bglr_mod2 <- data.frame(
       name = pheno[test, "Sample.ID"],
       env = pheno[test, "ENV"],
@@ -697,16 +698,16 @@ for (i in c(2, 5)) {
       rep = j,
       CV = i
     )
-
+    
     cvdf <- rbind(cvdf, pred_gblup_bglr_mod2)
-
+    
     ### Model 3: G + W
     EtaM3 <- list(Line =list(X = Z.L, model = "BRR"),
                   W = list(K = Wmat2, model = "RKHS"),
                   G = list(K = G_augE, model = "RKHS"))
-
+    
     Model3 <- BGLR(y = yNA, ETA = EtaM3, nIter = nIter, burnIn = burnIn, verbose = F)
-
+    
     pred_gblup_bglr_mod3 <- data.frame(
       name = pheno[test, "Sample.ID"],
       env = pheno[test, "ENV"],
@@ -716,17 +717,17 @@ for (i in c(2, 5)) {
       rep = j,
       CV = i
     )
-
+    
     cvdf <- rbind(cvdf, pred_gblup_bglr_mod3)
-
+    
     ### Model 4: G + W + GxW
     EtaM4 <- list(Line =list(X = Z.L, model = "BRR"),
                   W = list(K = Wmat2, model = "RKHS"),
                   G = list(K = G_augE, model = "RKHS"),
                   GW = list(K = GW, model = "RKHS"))
-
+    
     Model4 <- BGLR(y = yNA, ETA = EtaM4, nIter = nIter, burnIn = burnIn, verbose = F)
-
+    
     pred_gblup_bglr_mod4 <- data.frame(
       name = pheno[test, "Sample.ID"],
       env = pheno[test, "ENV"],
@@ -736,16 +737,16 @@ for (i in c(2, 5)) {
       rep = j,
       CV = i
     )
-
+    
     cvdf <- rbind(cvdf, pred_gblup_bglr_mod4)
-
+    
     ### Model 5: BayesA
     EtaM5 <- list(Line =list(X=Z.L, model = "BRR"),
                   ENV = list(X = Z.E, model = "FIXED"),
                   G = list(X = X_Bayes, model = "BayesA"))
-
+    
     Model5 <- BGLR(y = yNA, ETA = EtaM5, nIter = nIter, burnIn = burnIn, verbose = F)
-
+    
     pred_gblup_bglr_mod5 <- data.frame(
       name = pheno[test, "Sample.ID"],
       env = pheno[test, "ENV"],
@@ -755,16 +756,16 @@ for (i in c(2, 5)) {
       rep = j,
       CV = i
     )
-
+    
     cvdf <- rbind(cvdf, pred_gblup_bglr_mod5)
-
+    
     ### Model 6: BayesB
     EtaM6 <- list(Line =list(X=Z.L, model = "BRR"),
                   ENV = list(X = Z.E, model = "FIXED"),
                   G = list(X = X_Bayes, model = "BayesB"))
-
+    
     Model6 <- BGLR(y = yNA, ETA = EtaM6, nIter = nIter, burnIn = burnIn, verbose = F)
-
+    
     pred_gblup_bglr_mod6 <- data.frame(
       name = pheno[test, "Sample.ID"],
       env = pheno[test, "ENV"],
@@ -774,16 +775,16 @@ for (i in c(2, 5)) {
       rep = j,
       CV = i
     )
-
+    
     cvdf <- rbind(cvdf, pred_gblup_bglr_mod6)
-
+    
     ### Model 7: BayesC
     EtaM7 <- list(Line =list(X=Z.L, model = "BRR"),
                   ENV = list(X = Z.E, model = "FIXED"),
                   G = list(X = X_Bayes, model = "BayesC"))
-
+    
     Model7 <- BGLR(y = yNA, ETA = EtaM7, nIter = nIter, burnIn = burnIn, verbose = F)
-
+    
     pred_gblup_bglr_mod7 <- data.frame(
       name = pheno[test, "Sample.ID"],
       env = pheno[test, "ENV"],
@@ -793,16 +794,16 @@ for (i in c(2, 5)) {
       rep = j,
       CV = i
     )
-
+    
     cvdf <- rbind(cvdf, pred_gblup_bglr_mod7)
-
+    
     ### Model 8: Bayes LASSO
     EtaM8 <- list(Line =list(X=Z.L, model = "BRR"),
                   ENV = list(X = Z.E, model = "FIXED"),
                   G = list(X = X_Bayes, model = "BL"))
-
+    
     Model8 <- BGLR(y = yNA, ETA = EtaM8, nIter = nIter, burnIn = burnIn, verbose = F)
-
+    
     pred_gblup_bglr_mod8 <- data.frame(
       name = pheno[test, "Sample.ID"],
       env = pheno[test, "ENV"],
@@ -812,7 +813,7 @@ for (i in c(2, 5)) {
       rep = j,
       CV = i
     )
-
+    
     cvdf <- rbind(cvdf, pred_gblup_bglr_mod8)
   }
   rep_df <- rbind(rep_df, cvdf)
@@ -835,6 +836,8 @@ for (i in c(2,5)) {
   pheno <- pheno %>% filter(!is.na(WinSur)) %>% filter(Expt != "BDUP") %>% filter (!is.na(Sample.ID))
   pheno$ENV <- as.factor(pheno$ENV)
   pheno <- pheno %>% select("Sample.ID", "ENV", "WinSur")
+  pheno$ENV <- gsub( " .*$", "", pheno$ENV)
+  
   if (i == 2) {
     pheno <- pheno %>% filter(str_detect(ENV, "Lincoln"))
   } else if (i == 3) {
@@ -855,7 +858,7 @@ for (i in c(2,5)) {
   pheno$Sample.ID <- as.factor(pheno$Sample.ID)
   pheno_list <- unique(pheno$Sample.ID)
   pheno_list <- data.frame(pheno_list)
- 
+  
   #### Geno Data for GBLUP ####
   X <- read.csv("geno_allV2.csv")
   X <- X[order(X[, 1]), ]
@@ -913,8 +916,8 @@ for (i in c(2,5)) {
     t <- ncol(X_ML)
     #col_list <- nearZeroVar(X_ML)
     col_list <- which(apply(X_ML[,4:t], 2, var) == 0) #Exactly 0 variance
-   
-     if (length(col_list)>0) {
+    
+    if (length(col_list)>0) {
       X_ML <- X_ML[-col_list]
     }
     
@@ -1010,5 +1013,3 @@ for (i in c(2,5)) {
   rm(cvdf)
   write.csv(rep_df, "ML_WinSur_Results2.csv")
 }  
-
- 
