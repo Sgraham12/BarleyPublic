@@ -37,6 +37,9 @@ replaceNAwithMean <- function(mat){
 pheno <- read.csv("Cleaned_YieldTrials.csv")
 pheno_obs <- read.csv("BS4R8_24L_Corrected.csv")
 
+ggplot(pheno_obs, aes(Plot.Column, Plot.Range, fill= Check)) + 
+  geom_tile()
+
 #remove KANSAS, McCook, Oklahoma, Colby data
 pheno <- pheno %>% filter(!Location %in% c("KANSAS", "Oklahoma", "McCook", "Colby"))
 
