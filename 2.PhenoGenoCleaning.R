@@ -20,7 +20,6 @@ library(tidyverse)
 library(asreml)
 library(vcfR)
 library(SoyNAM)
-install.packages("cowplot")
 library(cowplot)
 
 setwd("/Users/sydneygraham/Library/CloudStorage/OneDrive-UniversityofNebraska-Lincoln/Documents/Statistics MS/Barley")
@@ -349,6 +348,19 @@ OBS$predicted.value <- NULL
 
 Obs_yld <- OBS
 
+modH2 <- asreml(fixed = YLDBUA ~ 1,
+                   random = ~ Name1 + Plot.Range,
+                   data = pheno_obs,
+                   maxiter = 25,
+                   na.action = na.method(y = "include", x = "include"))
+modH2 <- update.asreml(modH2)
+
+vc.g <- summary(modH2)$varcomp['Name1','component']
+vdBLUP.mat <- predict(modH2, classify="Name1", only="Name1", sed=TRUE)$sed^2 # obtain squared s.e.d. matrix 
+vdBLUP.avg <- mean(vdBLUP.mat[upper.tri(vdBLUP.mat, diag=FALSE)]) # take mean of upper triangle
+h2 <- 1 - (vdBLUP.avg / 2 / vc.g)
+h2 #heritability
+
 #height
 pheno_obs$Name1 <- as.factor(pheno_obs$Name1)
 norm_col <- asreml(fixed = HEIGHT ~ Name1,
@@ -385,6 +397,19 @@ OBS$std.error <- NULL
 OBS$predicted.value <- NULL
 
 Obs_WinSur <- OBS
+
+modH2 <- asreml(fixed = WINSUR ~ 1,
+                random = ~ Name1 + Plot.Range,
+                data = pheno_obs,
+                maxiter = 25,
+                na.action = na.method(y = "include", x = "include"))
+modH2 <- update.asreml(modH2)
+
+vc.g <- summary(modH2)$varcomp['Name1','component']
+vdBLUP.mat <- predict(modH2, classify="Name1", only="Name1", sed=TRUE)$sed^2 # obtain squared s.e.d. matrix 
+vdBLUP.avg <- mean(vdBLUP.mat[upper.tri(vdBLUP.mat, diag=FALSE)]) # take mean of upper triangle
+h2 <- 1 - (vdBLUP.avg / 2 / vc.g)
+h2 #heritability
 
 S4R8 <- merge(Obs_ht, Obs_yld, by = c("Name1", "status", "ENV", "Trial"), all = T)
 S4R8 <- merge(S4R8, Obs_WinSur, by = c("Name1", "status", "ENV", "Trial"), all = T)
