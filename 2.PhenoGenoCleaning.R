@@ -20,6 +20,8 @@ library(tidyverse)
 library(asreml)
 library(vcfR)
 library(SoyNAM)
+install.packages("cowplot")
+library(cowplot)
 
 setwd("/Users/sydneygraham/Library/CloudStorage/OneDrive-UniversityofNebraska-Lincoln/Documents/Statistics MS/Barley")
 
@@ -36,9 +38,10 @@ replaceNAwithMean <- function(mat){
 #### Load Pheno Data ####
 pheno <- read.csv("Cleaned_YieldTrials.csv")
 pheno_obs <- read.csv("BS4R8_24L_Corrected.csv")
+is.na(pheno_obs$YLDBUA) <- pheno_obs$YLDBUA > 140
 
 ggplot(pheno_obs, aes(Plot.Column, Plot.Range, fill= Check)) + 
-  geom_tile()
+  geom_tile() 
 
 #remove KANSAS, McCook, Oklahoma, Colby data
 pheno <- pheno %>% filter(!Location %in% c("KANSAS", "Oklahoma", "McCook", "Colby"))
@@ -64,6 +67,55 @@ trials <- unique(pheno$trial)
 pheno <- pheno[order(pheno$Experiment.Name, pheno$BLOC),]
 factors <- c("Name1","trial", "Year", "Experiment.Name", "BLOC")
 pheno[,factors] <- lapply(pheno[,factors] , factor)
+
+#### Visualization of Raw Data ####
+pheno$fake1 <- "Within Environment"
+pheno$fake2 <- "Across Environment"
+
+box <- ggplot(data = pheno, aes(x = env, y = YLDBUA, fill = Location)) + 
+  geom_boxplot() +
+  theme_grey() +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 90, vjust = 0.6)) +
+  xlab("Environment") +
+  ylab("Yield (bu/ac)") +
+  scale_fill_manual(values=c("#1f6f6f", "#54a1a1", "#9fc8c8")) +
+  facet_wrap(~fake1)
+
+hist <- ggplot(data = pheno, aes(x = YLDBUA)) + 
+  geom_histogram(position = "identity", binwidth = 5) + 
+  coord_flip() +
+  theme(axis.title.y = element_blank()) +
+  facet_wrap(~fake2) 
+
+final <- cowplot::plot_grid(box, hist, 
+                   ncol = 2, rel_widths = c(3, 1),
+                   align = 'h', axis = 'l')  
+
+save_plot("Yield_Dist.png", final, base_width = 7.25, base_height = 3.5)
+
+WS <- pheno %>% filter(!(is.na(WINSUR)))
+boxWS <- ggplot(data = WS, aes(x = env, y = WINSUR, fill = Location)) + 
+  geom_boxplot() +
+  theme_grey() +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 90, vjust = 0.6)) +
+  xlab("Environment") +
+  ylab("Winter Survival (%)") +
+  scale_fill_manual(values=c("#1f6f6f", "#54a1a1", "#9fc8c8")) +
+  facet_wrap(~fake1)
+
+histWS <- ggplot(data = WS, aes(x = WINSUR)) + 
+  geom_histogram(position = "identity", binwidth = 5) + 
+  coord_flip() +
+  theme(axis.title.y = element_blank()) +
+  facet_wrap(~fake2) 
+
+finalWS <- cowplot::plot_grid(boxWS, histWS, 
+                            ncol = 2, rel_widths = c(3, 1),
+                            align = 'h', axis = 'l')  
+
+save_plot("WinSur_Dist.png", finalWS, base_width = 7.25, base_height = 3.5)
 
 #Create a list of DFs that will contain BLUPs
 BLUP_list <- c()
