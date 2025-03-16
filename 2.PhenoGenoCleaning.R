@@ -70,19 +70,25 @@ pheno[,factors] <- lapply(pheno[,factors] , factor)
 #### Visualization of Raw Data ####
 pheno$fake1 <- "Within Environment"
 pheno$fake2 <- "Across Environment"
+pheno$YLDkgha <-  pheno$YLDBUA*53.8009
+median(pheno$YLDkgha, na.rm = T)
 
-box <- ggplot(data = pheno, aes(x = env, y = YLDBUA, fill = Location)) + 
+pheno_obs$YLDkgha <-  pheno_obs$YLDBUA*53.8009
+max(pheno_obs$YLDkgha, na.rm = T)
+
+
+box <- ggplot(data = pheno, aes(x = env, y = YLDkgha, fill = Location)) + 
   geom_boxplot() +
   theme_grey() +
   theme(legend.position = "none",
         axis.text.x = element_text(angle = 90, vjust = 0.6)) +
   xlab("Environment") +
-  ylab("Yield (bu/ac)") +
+  ylab("Yield (kg/ha)") +
   scale_fill_manual(values=c("#1f6f6f", "#54a1a1", "#9fc8c8")) +
   facet_wrap(~fake1)
 
-hist <- ggplot(data = pheno, aes(x = YLDBUA)) + 
-  geom_histogram(position = "identity", binwidth = 5) + 
+hist <- ggplot(data = pheno, aes(x = YLDkgha)) + 
+  geom_histogram(position = "identity", binwidth = 200) + 
   coord_flip() +
   theme(axis.title.y = element_blank()) +
   facet_wrap(~fake2) 

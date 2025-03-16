@@ -40,7 +40,7 @@ mean_imputation <- function(df){
   return(df)
 }
 
-#### Define GS Parameters ####
+#### Define BGLR Parameters ####
 burnIn <- 3000
 nIter <- 30000
 reps <- 1
@@ -113,7 +113,17 @@ for (i in 1:8) {
   G <- tcrossprod(X)/p
   dim(G)
   
-  #### Geno Data for Bayes ####
+  GRM <- data.frame(G)
+  GRM$color <- NA
+  GRM[1:185,'color'] <- "training"
+  GRM[186:376, 'color'] <- "testing"
+  GRM[97, 'color'] <- "Hitchcock"
+  GRM[46,'color'] <- "TAMBAR501"
+  
+  heatmap(G, Rowv = NA, Colv = NA)  
+  autoplot(prcomp(GRM[1:376]), data = GRM, color = "color", x = 1, y = 2)
+
+    #### Geno Data for Bayes ####
   rownames(X)
   X_Bayes <- merge(pheno, X, by.x = "Sample.ID", by.y = "row.names")
   X_Bayes <- X_Bayes[,-1:-3]
