@@ -131,7 +131,8 @@ for (i in 1:8) {
     geom_point(data = df[df$V3 == "testing",], aes(color = V3)) +
     geom_point(data = df[df$V3 == "Hitchcock",], aes(color = V3)) +
     geom_point(data = df[df$V3 == "TAMBAR501",], aes(color = V3)) +
-    theme_gray() + labs(color='Color') 
+    theme_gray() + labs(color='Color')  +
+    xlab("PC1 (20.62%)") + ylab("PC2 (11.67%)")
   
   heatmap(G, Rowv = NA, Colv = NA)  
   autoplot(prcomp(GRM[1:376]), data = GRM, color = "color", x = 1, y = 2)
