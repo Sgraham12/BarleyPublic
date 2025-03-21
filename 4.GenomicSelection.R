@@ -23,6 +23,7 @@ library(caret)
 library(purrr)
 library(randomForest)
 library(xgboost)
+library(ggfortify)
 
 setwd("~/Library/CloudStorage/OneDrive-UniversityofNebraska-Lincoln/Documents/Statistics MS/Barley")
 
@@ -119,6 +120,18 @@ for (i in 1:8) {
   GRM[186:376, 'color'] <- "testing"
   GRM[97, 'color'] <- "Hitchcock"
   GRM[46,'color'] <- "TAMBAR501"
+  pc <- prcomp(GRM[1:376])
+  df <- cbind(pc$x[,1:2], GRM[,377]) %>% as.data.frame()
+  df$PC1 <- as.numeric(df$PC1) / (pc$sdev[1] * sqrt(nrow(GRM)))
+  df$PC2 <- as.numeric(df$PC2) / (pc$sdev[2] * sqrt(nrow(GRM)))
+  df$V3 <- as.factor(df$V3)
+  
+  ggplot(df, aes(PC1, PC2)) +
+    geom_point(data = df[df$V3 == "training",], aes(color = V3)) +
+    geom_point(data = df[df$V3 == "testing",], aes(color = V3)) +
+    geom_point(data = df[df$V3 == "Hitchcock",], aes(color = V3)) +
+    geom_point(data = df[df$V3 == "TAMBAR501",], aes(color = V3)) +
+    theme_gray() + labs(color='Color') 
   
   heatmap(G, Rowv = NA, Colv = NA)  
   autoplot(prcomp(GRM[1:376]), data = GRM, color = "color", x = 1, y = 2)
