@@ -19,6 +19,8 @@
 # 14. YieldData/BDUP06.dbf
 # 15. YieldData/bdup04t.dbf
 # 16. ListofGenos.csv
+# 17. YieldData/BVT10.xlsx
+# 18. YieldData/BVT09MD_ColbyKS.xls
 
 #### Output files: ####
 # 1. BVTData_Cleaned.csv
@@ -197,15 +199,24 @@ BVT08 <- BVT08[,which(names(BVT08) %in% standard)]
 BVT08 <- data.frame(BVT08)
 BVT08 <- standardize(BVT08)
 
-BVT09 <- read_excel("YieldData/BVT09CO.xls")
+BVT09 <- read_excel("YieldData/BVT09MD_ColbyKS.xls", sheet = "Sheet3")
 BVT09 <- data.frame(BVT09)
 BVT09 <- metadata(BVT09, 1)
-colnames(BVT09) <- c("Experiment.Name", "Year", "Location", "BLOC", "IBLOC", "Order",  "EntryNo", "Plot", "Previous.Nursery", "PlotOld", "Name1","Pedigree", "HDATEJULIA", "HEIGHT", "Plot_WT", "MOIST", "TESTWT")
+colnames(BVT09) <- c("Experiment.Name", "Year", "Location", "BLOC", "IBLOC", "Order",  "EntryNo", "Plot", "Previous.Nursery", "PlotOld", "Name1","Pedigree", "HEIGHT", "Plot_WT", "YLD_LBS", "WinSur", "HDATEJULIA")
 BVT09$YLDBUA <- NA
 BVT09 <- gms2bushels(BVT09,"Plot_WT")
 BVT09 <- BVT09[,which(names(BVT09) %in% standard)]
 BVT09$HDATEJULIA <- (as.numeric(BVT09$HDATEJULIA) +121) #convert to julian, not leap year
 BVT09 <- standardize(BVT09)
+
+BVT10 <- read_excel("YieldData/BVT10.xlsx")
+BVT10 <- data.frame(BVT10)
+colnames(BVT10) <- c("Experiment.Name", "Location", "Year","Plot", "BLOC", "Name1", "WinSur","HDATEJULIA", "HEIGHT", "Plot_WT")
+BVT10$YLDBUA <- NA
+BVT10 <- gms2bushels(BVT10,"Plot_WT")
+BVT10$HDATEJULIA <- (as.numeric(BVT10$HDATE) +121) #convert to julian, not leap year
+BVT10 <- BVT10[,which(names(BVT10) %in% standard)]
+BVT10 <- standardize(BVT10)
 
 genovix <- read.csv("YieldData/BVT_Genovix.csv") #Data exported from genovix, unused columns and remmnant removed, NewNames added
 BVT22 <- genovix[genovix$Year == '2022',] #2022 YLDBUA looks good
@@ -274,12 +285,6 @@ BVT11 <- genovix[genovix$Year == '2011',]
 BVT11 <- gms2bushels(BVT11,"YIELD")
 BVT11 <- BVT11[,which(names(BVT11) %in% standard)]
 BVT11 <- standardize(BVT11)
-
-BVT10 <- genovix[genovix$Year == '2010',]
-BVT10 <- gms2bushels(BVT10,"YIELD")
-BVT10$HDATEJULIA <- (as.numeric(BVT10$HDATE) +121) #convert to julian, not leap year
-BVT10 <- BVT10[,which(names(BVT10) %in% standard)]
-BVT10 <- standardize(BVT10)
 
 #Do not know why so much data is missing for this year
 BVT07 <- genovix[genovix$Year == '2007',]
