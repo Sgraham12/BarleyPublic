@@ -3,7 +3,7 @@
 # 2/5/2025
 
 #### Required files: ####
-# 1. all_phenoV7.csv (2.PhenoGenoCleaning.R)
+# 1. all_phenoV8.csv (2.PhenoGenoCleaning.R)
 # 2. Cleaned_YieldTrials.csv (1.DataCleaning.R)
 
 #### Output files: ####
@@ -17,7 +17,7 @@ library(tidyverse)
 setwd("~/Library/CloudStorage/OneDrive-UniversityofNebraska-Lincoln/Documents/Statistics MS/Barley")
 
 #### Test Factors for Significance ####
-data <- read.csv("all_phenoV7.csv")
+data <- read.csv("all_phenoV8.csv")
 data$Year <- substr(data$ENV, 1, 4)
 data$Loc <- gsub('[0-9]+', '', data$ENV)
 data$Loc <- gsub( " .*$", "", data$Loc )
@@ -178,6 +178,8 @@ consecutive_years <- pheno %>%
 
 DurationOfGenos <- pheno %>% group_by(Name1) %>% summarise(First = min(Year), Last = max(Year), Duration = (Last - First))
 
+mean(consecutive_years$PercentFromPrevYear)
+
 #### EBV METHOD  ####
 #https://doi.org/10.1002/tpg2.20471
 #https://github.com/Biometrics-IITA/Estimating-Realized-Genetic-Gain/blob/main/realized_genetic_gain.R
@@ -299,7 +301,7 @@ if (!is.null(model.combined)) {
     left_join(pheno |>
                 select(Name1, check) |>
                 distinct(Name1, .keep_all = TRUE)) |>
-    filter(check != 1) |>
+    filter(check != 1) |> filter(Year != 2002) |>
     droplevels()
   
   #### STEP 3: weighted-linear regression of the combined BLUEs on the year of origin
