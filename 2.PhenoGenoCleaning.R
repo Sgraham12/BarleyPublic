@@ -11,8 +11,8 @@
 # 6. UNL2024Frels-B3K_01-02.MorexV3.IDnum.vcf
 
 #### Output files: ####
-# 1. all_phenoV7.csv
-# 2. geno_allV2.csv
+# 1. all_phenoV8.csv
+# 2. geno_allV3.csv
 
 #Load Packages
 library(BGLR)
@@ -71,11 +71,10 @@ pheno[,factors] <- lapply(pheno[,factors] , factor)
 pheno$fake1 <- "Within Environment"
 pheno$fake2 <- "Across Environment"
 pheno$YLDkgha <-  pheno$YLDBUA*53.8009
-median(pheno$YLDkgha, na.rm = T)
+median(pheno$WINSUR, na.rm = T)
 
 pheno_obs$YLDkgha <-  pheno_obs$YLDBUA*53.8009
-max(pheno_obs$YLDkgha, na.rm = T)
-
+median(pheno_obs$YLDkgha, na.rm = T)
 
 box <- ggplot(data = pheno, aes(x = env, y = YLDkgha, fill = Location)) + 
   geom_boxplot() +
@@ -84,7 +83,7 @@ box <- ggplot(data = pheno, aes(x = env, y = YLDkgha, fill = Location)) +
         axis.text.x = element_text(angle = 90, vjust = 0.6)) +
   xlab("Environment") +
   ylab("Yield (kg/ha)") +
-  scale_fill_manual(values=c("#1f6f6f", "#54a1a1", "#9fc8c8")) +
+  scale_fill_manual(values=c("#440154FF", "#21908CFF", "#FDE725FF")) +
   facet_wrap(~fake1)
 
 hist <- ggplot(data = pheno, aes(x = YLDkgha)) + 
@@ -97,7 +96,7 @@ final <- cowplot::plot_grid(box, hist,
                    ncol = 2, rel_widths = c(3, 1),
                    align = 'h', axis = 'l')  
 
-save_plot("Yield_Dist.png", final, base_width = 7.25, base_height = 3.5)
+save_plot("Yield_Dist2.png", final, base_width = 7.25, base_height = 3.5)
 
 WS <- pheno %>% filter(!(is.na(WINSUR)))
 boxWS <- ggplot(data = WS, aes(x = env, y = WINSUR, fill = Location)) + 
@@ -107,7 +106,7 @@ boxWS <- ggplot(data = WS, aes(x = env, y = WINSUR, fill = Location)) +
         axis.text.x = element_text(angle = 90, vjust = 0.6)) +
   xlab("Environment") +
   ylab("Winter Survival (%)") +
-  scale_fill_manual(values=c("#1f6f6f", "#54a1a1", "#9fc8c8")) +
+  scale_fill_manual(values=c("#440154FF", "#21908CFF", "#FDE725FF")) +
   facet_wrap(~fake1)
 
 histWS <- ggplot(data = WS, aes(x = WINSUR)) + 
@@ -120,7 +119,7 @@ finalWS <- cowplot::plot_grid(boxWS, histWS,
                             ncol = 2, rel_widths = c(3, 1),
                             align = 'h', axis = 'l')  
 
-save_plot("WinSur_Dist.png", finalWS, base_width = 7.25, base_height = 3.5)
+save_plot("WinSur_Dist2.png", finalWS, base_width = 7.25, base_height = 3.5)
 
 #Create a list of DFs that will contain BLUPs
 BLUP_list <- c()
@@ -442,7 +441,7 @@ pheno_final_obs$W.WinSur <- NA
 pheno_final$Trial <- "BVT"
 data <- rbind(pheno_final, pheno_final_obs)
 
-write.csv(data, "all_phenoV7.csv")
+write.csv(data, "all_phenoV8.csv")
 
 #### Import Geno Data - Yield Trials ####
 
@@ -536,5 +535,5 @@ if (impMethod == "naive") geno_imp <- replaceNAwithMean(geno_num6)
 geno_list <- rownames(geno_imp)
 pheno2 <- data[data$Sample.ID %in% geno_list, ]
 
-write.csv(geno_imp, "geno_allV2.csv") #376 x 3055
+write.csv(geno_imp, "geno_allV3.csv") #394 x 3055
 
