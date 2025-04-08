@@ -176,7 +176,7 @@ test <- AllPhenos %>%
 
 WinSur <- test %>% filter(ProportionWinSur > 10) #more than 10% WINSUR
 
-trials_to_keep <- c("2022Mead BDUP", "2023Lincoln BDUP", "2008Lincoln BVT", "2011Lincoln BVT", "2014Mead BVT", "2015Lincoln BVT", "2015Mead BVT", "2016Mead BVT", "2022Mead BVT")
+trials_to_keep <- c("2022Mead BDUP", "2023Lincoln BDUP", "2008Lincoln BVT", "2009Mead BVT", "2010Lincoln BVT", "2011Lincoln BVT", "2014Mead BVT", "2015Lincoln BVT", "2015Mead BVT", "2016Mead BVT", "2022Mead BVT")
 pheno <- AllPhenos[AllPhenos$trial %in% trials_to_keep, ]
 
 trials <- unique(pheno$trial)
