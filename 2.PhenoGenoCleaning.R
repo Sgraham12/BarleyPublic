@@ -37,7 +37,7 @@ replaceNAwithMean <- function(mat){
 #### Load Pheno Data ####
 pheno <- read.csv("Cleaned_YieldTrials.csv")
 pheno_obs <- read.csv("BS4R8_24L_Corrected.csv")
-is.na(pheno_obs$YLDBUA) <- pheno_obs$YLDBUA > 140
+is.na(pheno_obs$YLDBUA) <- pheno_obs$YLDBUA > 155
 
 ggplot(pheno_obs, aes(Plot.Column, Plot.Range, fill= Check)) + 
   geom_tile() 
@@ -75,6 +75,12 @@ median(pheno$WINSUR, na.rm = T)
 
 pheno_obs$YLDkgha <-  pheno_obs$YLDBUA*53.8009
 median(pheno_obs$YLDkgha, na.rm = T)
+
+obs_publish <- pheno_obs %>% filter(Name1 != "DUMMY")
+pheno_publish <- pheno
+
+write.csv(obs_publish, "Obs2024_Pheno.csv")
+write.csv(pheno_publish, "BVT_Pheno.csv")
 
 box <- ggplot(data = pheno, aes(x = env, y = YLDkgha, fill = Location)) + 
   geom_boxplot() +

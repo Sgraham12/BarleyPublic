@@ -3,9 +3,9 @@
 # 2/5/2025
 
 #### Required files: ####
-# 1. all_phenoV7.csv (2.PhenoGenoCleaning.R)
+# 1. all_phenoV8.csv (2.PhenoGenoCleaning.R)
 # 2. W_SummerOnly.csv
-# 3. geno_allV2.csv (2.PhenoGenoCleaning.R)
+# 3. geno_allV3.csv (2.PhenoGenoCleaning.R)
 
 #### Output files: ####
 # 1. BGLR_Yield_Results.csv
@@ -50,7 +50,7 @@ reps <- 1
 ### Import all Pheno Data ###
 rep_df <- data.frame()
 for (i in 1:8) {
-  pheno <- read.csv("all_phenoV7.csv")
+  pheno <- read.csv("all_phenoV8.csv")
   pheno <- pheno %>%
     mutate(Expt = case_when(
       grepl("BDUP", Trial) ~ "BDUP",
@@ -85,7 +85,7 @@ for (i in 1:8) {
   pheno_list <- data.frame(pheno_list)
   
   #### Geno Data for GBLUP ####
-  X <- read.csv("geno_allV2.csv")
+  X <- read.csv("geno_allV3.csv")
   X <- X[order(X[, 1]), ]
   X_merge <- merge(pheno_list, X, by.x = "pheno_list", by.y = "X", all.x = T)
   
@@ -114,28 +114,30 @@ for (i in 1:8) {
   G <- tcrossprod(X)/p
   dim(G)
   
-  GRM <- data.frame(G)
-  GRM$color <- NA
-  GRM[1:185,'color'] <- "training"
-  GRM[186:376, 'color'] <- "testing"
-  GRM[97, 'color'] <- "Hitchcock"
-  GRM[46,'color'] <- "TAMBAR501"
-  pc <- prcomp(GRM[1:376])
-  df <- cbind(pc$x[,1:2], GRM[,377]) %>% as.data.frame()
-  df$PC1 <- as.numeric(df$PC1) / (pc$sdev[1] * sqrt(nrow(GRM)))
-  df$PC2 <- as.numeric(df$PC2) / (pc$sdev[2] * sqrt(nrow(GRM)))
-  df$V3 <- as.factor(df$V3)
-  
-  ggplot(df, aes(PC1, PC2)) +
-    geom_point(data = df[df$V3 == "training",], aes(color = V3)) +
-    geom_point(data = df[df$V3 == "testing",], aes(color = V3)) +
-    geom_point(data = df[df$V3 == "Hitchcock",], aes(color = V3)) +
-    geom_point(data = df[df$V3 == "TAMBAR501",], aes(color = V3)) +
-    theme_gray() + labs(color='Color')  +
-    xlab("PC1 (20.62%)") + ylab("PC2 (11.67%)")
-  
-  heatmap(G, Rowv = NA, Colv = NA)  
-  autoplot(prcomp(GRM[1:376]), data = GRM, color = "color", x = 1, y = 2)
+  # GRM <- data.frame(G)
+  # GRM$color <- NA
+  # GRM[1:207,'color'] <- "training"
+  # GRM[208:394, 'color'] <- "testing"
+  # GRM[97, 'color'] <- "Hitchcock"
+  # GRM[46,'color'] <- "TAMBAR501"
+  # pc <- prcomp(GRM[1:394])
+  # df <- cbind(pc$x[,1:2], GRM[,395]) %>% as.data.frame()
+  # df$PC1 <- as.numeric(df$PC1) / (pc$sdev[1] * sqrt(nrow(GRM)))
+  # df$PC2 <- as.numeric(df$PC2) / (pc$sdev[2] * sqrt(nrow(GRM)))
+  # df$V3 <- as.factor(df$V3)
+  # 
+  # geno_pca <- ggplot(df, aes(PC1, PC2)) +
+  #   geom_point(data = df[df$V3 == "training",], aes(color = V3)) +
+  #   geom_point(data = df[df$V3 == "testing",], aes(color = V3)) +
+  #   geom_point(data = df[df$V3 == "Hitchcock",], aes(color = V3)) +
+  #   geom_point(data = df[df$V3 == "TAMBAR501",], aes(color = V3)) +
+  #   theme_gray() + labs(color='Color')  +
+  #   xlab("PC1 (20.93%)") + ylab("PC2 (11.26%)")
+  # 
+  # ggsave(geno_pca, filename = "PCA_Geno.png", units = "in", width = 7.25, height = 5, dpi = 800)
+  # 
+  # heatmap(G, Rowv = NA, Colv = NA)  
+  # autoplot(prcomp(GRM[1:394]), data = GRM, color = "color", x = 1, y = 2)
 
     #### Geno Data for Bayes ####
   rownames(X)
@@ -350,7 +352,7 @@ for (i in 1:8) {
 #### Machine Learning #####
 rep_df <- data.frame()
 for (i in 1:8) {
-  pheno <- read.csv("all_phenoV7.csv")
+  pheno <- read.csv("all_phenoV8.csv")
   pheno <- pheno %>%
     mutate(Expt = case_when(
       grepl("BDUP", Trial) ~ "BDUP",
@@ -385,7 +387,7 @@ for (i in 1:8) {
   pheno_list <- data.frame(pheno_list)
   
   #### Geno Data for GBLUP ####
-  X <- read.csv("geno_allV2.csv")
+  X <- read.csv("geno_allV3.csv")
   X <- X[order(X[, 1]), ]
   X_merge <- merge(pheno_list, X, by.x = "pheno_list", by.y = "X", all.x = T)
   
@@ -571,7 +573,7 @@ for (i in 1:8) {
 ## Import all Pheno Data ###
 rep_df <- data.frame()
 for (i in c(2, 5)) {
-  pheno <- read.csv("all_phenoV7.csv")
+  pheno <- read.csv("all_phenoV8.csv")
   pheno <- pheno %>%
     mutate(Expt = case_when(
       grepl("BDUP", Trial) ~ "BDUP",
@@ -605,8 +607,12 @@ for (i in c(2, 5)) {
   pheno_list <- unique(pheno$Sample.ID)
   pheno_list <- data.frame(pheno_list)
   
+  corr <- pheno %>% filter(ENV == "2015Lincoln" |ENV == "2015Mead") 
+  corr <- corr %>% pivot_wider(names_from = ENV, values_from = WinSur)
+  cor(corr$'2015Mead', corr$'2015Lincoln')
+  
   #### Geno Data for GBLUP ####
-  X <- read.csv("geno_allV2.csv")
+  X <- read.csv("geno_allV3.csv")
   X <- X[order(X[, 1]), ]
   X_merge <- merge(pheno_list, X, by.x = "pheno_list", by.y = "X", all.x = T)
   
@@ -848,7 +854,7 @@ for (i in c(2, 5)) {
 #### Machine Learning #####
 rep_df <- data.frame()
 for (i in c(2,5)) {
-  pheno <- read.csv("all_phenoV7.csv")
+  pheno <- read.csv("all_phenoV8.csv")
   pheno <- pheno %>%
     mutate(Expt = case_when(
       grepl("BDUP", Trial) ~ "BDUP",
@@ -884,7 +890,7 @@ for (i in c(2,5)) {
   pheno_list <- data.frame(pheno_list)
   
   #### Geno Data for GBLUP ####
-  X <- read.csv("geno_allV2.csv")
+  X <- read.csv("geno_allV3.csv")
   X <- X[order(X[, 1]), ]
   X_merge <- merge(pheno_list, X, by.x = "pheno_list", by.y = "X", all.x = T)
   
